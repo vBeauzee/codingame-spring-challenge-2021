@@ -21,6 +21,11 @@ class Player
     public static int growCostTo2 = 0;
     public static int growCostTo3 = 0;
 
+    public static int numberOfSeeds = 0;
+    public static int numberOfTree1 = 0;
+    public static int numberOfTree2 = 0;
+    public static int numberOfTree3 = 0;
+
     public static List<Cell> InitCells()
     {
         string[] inputs;
@@ -39,47 +44,56 @@ class Player
     }
 
     private static List<Tree> InitTrees(Day currentDay) {
-        Console.Error.WriteLine("## CURRENT TREES ##");
+        //Console.Error.WriteLine("## CURRENT TREES ##");
         List<Tree> trees = new List<Tree>();
         for (int i = 0; i < currentDay.numberOfTrees; i++)
         {
             Tree tree = new Tree();
-            Console.Error.WriteLine(tree.ToString());
+            //Console.Error.WriteLine(tree.ToString());
             trees.Add(tree);
         }
         return trees;
     }
 
-    private static void ComputeAllCosts() {
+    private static void ComputeCountAndCosts() {
         seedCost = 0;
         growCostTo1 = 1;
         growCostTo2 = 3;
         growCostTo3 = 7;
+        numberOfSeeds = 0;
+        numberOfTree1 = 0;
+        numberOfTree2 = 0;
+        numberOfTree3 = 0;
         foreach (Tree tree in trees){
             if (tree.isMine){
                 switch (tree.size) 
                 {
                     case 0 : 
                         seedCost++;
+                        numberOfSeeds++;
                         break;
                     case 1 :
                         growCostTo1++;
+                        numberOfTree1++;
                         break;
                     case 2 :
                         growCostTo2++;
+                        numberOfTree2++;
                         break;
                     case 3 :
                         growCostTo3++;
+                        numberOfTree3++;
                         break;
                 }
             }
         }
+         Console.Error.WriteLine("Seed : " + numberOfSeeds + " cost : " + seedCost + "\n" + "Tree1 : " + numberOfTree1 + " cost : " + growCostTo1 + "\n" + "Tree2 : " + numberOfTree2 + " cost : " + growCostTo2 + "\n" + "Tree 3 : " + numberOfTree3 + " cost : " + growCostTo3);
     }
 
     private static Dictionary<string, List<Coordinate>> InitPossibleActionByType() {
         Dictionary<string, List<Coordinate>> actionByType = new Dictionary<string, List<Coordinate>>();
         int numberOfPossibleActions = int.Parse(Console.ReadLine()); // all legal actions
-        Console.Error.WriteLine("## POSSIBLE ACTIONS ##");
+        //Console.Error.WriteLine("## POSSIBLE ACTIONS ##");
         for (int i = 0; i < numberOfPossibleActions; i++)
         {
             string possibleAction = Console.ReadLine(); // try printing something from here to start with
@@ -112,10 +126,11 @@ class Player
             } else {
                 sortedActionByType[keyAction] = actionByType[keyAction].OrderBy(coord => coord.cellIndex).ToList();
             }
+            /*
             foreach (Coordinate coordinate in sortedActionByType[keyAction]) 
             {
                 Console.Error.WriteLine(keyAction + " " + coordinate.ToString());
-            }
+            }*/
         }
         return sortedActionByType;
     } 
@@ -151,29 +166,27 @@ class Player
         while (true)
         {
             currentDay = new Day();
-            Console.Error.WriteLine("## CURRENT DAY ##\n" + currentDay.ToString());
+            //Console.Error.WriteLine("## CURRENT DAY ##\n" + currentDay.ToString());
             trees = InitTrees(currentDay);
-            Console.Error.WriteLine("## COST AS START OF DAY ##" + "\n" + "SeedCost : " + seedCost+  " | 0 to 1 : " + growCostTo1 + " | 1 to 2 : " + growCostTo2 + " | 2 to 3 : " + growCostTo3 );
+            //Console.Error.WriteLine("## COST AS START OF DAY ##" + "\n" + "SeedCost : " + seedCost+  " | 0 to 1 : " + growCostTo1 + " | 1 to 2 : " + growCostTo2 + " | 2 to 3 : " + growCostTo3 );
             Dictionary<string, List<Coordinate>> actionByType = InitPossibleActionByType();
-            ComputeAllCosts();
+            ComputeCountAndCosts();
             string currentCommand = "WAIT";
-            if (currentDay.index > 21 ) {
-                if (actionByType.ContainsKey("COMPLETE")) {
-                    foreach (Coordinate coordinate in actionByType["COMPLETE"]) {
-                        if (coordinate.cellIndex < 7 && currentDay.sun > 3) 
-                        {
-                            currentCommand = "COMPLETE " + coordinate.cellIndex;
-                            break;
-                        } else if (coordinate.cellIndex < 19 && currentDay.sun > 3) 
-                        {
-                            currentCommand = "COMPLETE " + coordinate.cellIndex;
-                            break;
-                        } else if ( currentDay.sun > 3 ) {
-                            currentCommand = "COMPLETE " + coordinate.cellIndex;
-                            break;
-                        }
-                    } 
-                }
+            if ((currentDay.index > 21 || numberOfTree3 > 4 ) && actionByType.ContainsKey("COMPLETE")) {
+                foreach (Coordinate coordinate in actionByType["COMPLETE"]) {
+                    if (coordinate.cellIndex < 7 && currentDay.sun > 3) 
+                    {
+                        currentCommand = "COMPLETE " + coordinate.cellIndex;
+                        break;
+                    } else if (coordinate.cellIndex < 19 && currentDay.sun > 3) 
+                    {
+                        currentCommand = "COMPLETE " + coordinate.cellIndex;
+                        break;
+                    } else if ( currentDay.sun > 3 ) {
+                        currentCommand = "COMPLETE " + coordinate.cellIndex;
+                        break;
+                    }
+                } 
             }
             if (currentCommand == "WAIT" && actionByType.ContainsKey("GROW")) 
             {
@@ -194,26 +207,24 @@ class Player
                     }
                 }
             } 
-            if (currentDay.index < 21 ) {
-                if (currentCommand == "WAIT" && actionByType.ContainsKey("SEED")) {
-                    foreach (Coordinate coordinate in actionByType["SEED"]) 
+            if ( numberOfSeeds < 2 && currentDay.index < 19 && currentCommand == "WAIT" && actionByType.ContainsKey("SEED")) {
+                foreach (Coordinate coordinate in actionByType["SEED"]) 
+                {
+                    if (coordinate.targetIndex < 7  &&  currentDay.sun >= seedCost) 
                     {
-                        if (coordinate.targetIndex < 7  &&  currentDay.sun >= seedCost) 
-                        {
-                            currentCommand = "SEED " + coordinate.cellIndex + " " + coordinate.targetIndex;
-                            seedCost++;
-                            break;
-                        }  else if (coordinate.targetIndex < 19  && currentDay.sun >= seedCost) 
-                        {
-                            currentCommand = "SEED " + coordinate.cellIndex + " " + coordinate.targetIndex;
-                            seedCost++;
-                            break;
-                        } else if (currentDay.sun >= seedCost ) {
-                            currentCommand = "SEED " + coordinate.cellIndex + " " + coordinate.targetIndex;
-                            seedCost++;
-                            break;
-                        }
-                    }
+                        currentCommand = "SEED " + coordinate.cellIndex + " " + coordinate.targetIndex;
+                        seedCost++;
+                        break;
+                    }  else if (coordinate.targetIndex < 19  && currentDay.sun >= seedCost) 
+                    {
+                        currentCommand = "SEED " + coordinate.cellIndex + " " + coordinate.targetIndex;
+                        seedCost++;
+                        break;
+                    } else if (currentDay.sun >= seedCost ) {
+                        currentCommand = "SEED " + coordinate.cellIndex + " " + coordinate.targetIndex;
+                        seedCost++;
+                        break;
+                    }                   
                 }
             }
 
