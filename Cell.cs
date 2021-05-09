@@ -4,8 +4,9 @@ class Cell
     public int richness;
     public List<int> neighboors = new List<int>();
 
-    public Cell(string[] inputs) 
+    public Cell() 
     {
+        string[] inputs = Console.ReadLine().Split(' ');
         index = int.Parse(inputs[0]); // 0 is the center cell, the next cells spiral outwards
         richness = int.Parse(inputs[1]); // 0 if the cell is unusable, 1-3 for usable cells
         // the index of the neighbouring cell for each direction

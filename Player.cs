@@ -12,88 +12,99 @@ using System.Collections.Generic;
 class Player
 {
 
-    public static List<Cell> cells;
-    public static List<Tree> trees;
+    public static Dictionary<int,Cell> cellsByIndex  = new Dictionary<int,Cell>();
+    public static Dictionary<int,List<Tree>> myTreesBySize = new Dictionary<int,List<Tree>>();
+    public static Dictionary<int,Tree> myTreesByindex = new Dictionary<int,Tree>();
     public static Day currentDay;
+    public static Dictionary<string, List<Coordinate>> actionByType = new Dictionary<string, List<Coordinate>>();
+    public static Dictionary<int, int> costBySize = new Dictionary<int, int>();
+    public static Dictionary<int, int> countBySize = new Dictionary<int, int>();
 
-    public static int seedCost = 0;
-    public static int growCostTo1 = 0;
-    public static int growCostTo2 = 0;
-    public static int growCostTo3 = 0;
-
-    public static int numberOfSeeds = 0;
-    public static int numberOfTree1 = 0;
-    public static int numberOfTree2 = 0;
-    public static int numberOfTree3 = 0;
-
-    public static List<Cell> InitCells()
+    public static void InitCells()
     {
-        string[] inputs;
         int numberOfCells = int.Parse(Console.ReadLine()); // 37
-        List<Cell> cells = new List<Cell>();
+        cellsByIndex.Clear();
         for (int i = 0; i < numberOfCells; i++)
         {
-            inputs = Console.ReadLine().Split(' ');
-            cells.Add(new Cell(inputs));
+            Cell cell = new Cell(); 
+            cellsByIndex[cell.index] = cell; 
         }
-        /*foreach (Cell cell in cells) 
+        foreach (int key in cellsByIndex.Keys) 
         {
-            Console.Error.WriteLine(cell.ToString());
-        }*/  
-        return cells;
+            Console.Error.WriteLine(cellsByIndex[key].ToString());
+        }
     }
 
-    private static List<Tree> InitTrees(Day currentDay) {
-        //Console.Error.WriteLine("## CURRENT TREES ##");
-        List<Tree> trees = new List<Tree>();
+    private static void InitMyTrees() 
+    {
+        myTreesBySize.Clear();
+        myTreesByindex.Clear();
+        Console.Error.WriteLine("## CURRENT TREES ##");
         for (int i = 0; i < currentDay.numberOfTrees; i++)
         {
             Tree tree = new Tree();
-            //Console.Error.WriteLine(tree.ToString());
-            trees.Add(tree);
-        }
-        return trees;
-    }
-
-    private static void ComputeCountAndCosts() {
-        seedCost = 0;
-        growCostTo1 = 1;
-        growCostTo2 = 3;
-        growCostTo3 = 7;
-        numberOfSeeds = 0;
-        numberOfTree1 = 0;
-        numberOfTree2 = 0;
-        numberOfTree3 = 0;
-        foreach (Tree tree in trees){
-            if (tree.isMine){
-                switch (tree.size) 
+            if (tree.isMine) {
+                if (!myTreesBySize.ContainsKey(tree.size))
                 {
-                    case 0 : 
-                        seedCost++;
-                        numberOfSeeds++;
-                        break;
-                    case 1 :
-                        growCostTo1++;
-                        numberOfTree1++;
-                        break;
-                    case 2 :
-                        growCostTo2++;
-                        numberOfTree2++;
-                        break;
-                    case 3 :
-                        growCostTo3++;
-                        numberOfTree3++;
-                        break;
+                    myTreesBySize[tree.size] = new List<Tree>();
                 }
+                myTreesBySize[tree.size].Add(tree);
+                myTreesByindex[tree.cellIndex] = tree;
             }
         }
-         Console.Error.WriteLine("Seed : " + numberOfSeeds + " cost : " + seedCost + "\n" + "Tree1 : " + numberOfTree1 + " cost : " + growCostTo1 + "\n" + "Tree2 : " + numberOfTree2 + " cost : " + growCostTo2 + "\n" + "Tree 3 : " + numberOfTree3 + " cost : " + growCostTo3);
+        Dictionary<int,List<Tree>> treesBySizeSorted = new Dictionary<int,List<Tree>>();
+        foreach ( int key in myTreesBySize.Keys ) {
+            treesBySizeSorted[key] = myTreesBySize[key].OrderBy(tree => tree.cellIndex).ToList();
+        }
+        foreach ( int key in myTreesByindex.Keys) {
+            Console.Error.WriteLine(myTreesByindex[key].ToString());
+        }
+        Console.Error.WriteLine();
+        myTreesBySize = treesBySizeSorted;
     }
 
-    private static Dictionary<string, List<Coordinate>> InitPossibleActionByType() {
-        Dictionary<string, List<Coordinate>> actionByType = new Dictionary<string, List<Coordinate>>();
+    private static int CountTreeBySize(int size) 
+    {
+        if (myTreesBySize.ContainsKey(size) )
+        {
+            return myTreesBySize[size].Count;
+        }
+        return 0; 
+    }
+
+    private static void ComputeCountAndCosts() 
+    {   
+        for ( int i = 0 ; i < 4 ; i++ )
+        {
+            int count = CountTreeBySize(i);
+            countBySize[i] = count;
+            int baseCost = 0;
+            switch (i)
+            {
+                case 1 : 
+                    baseCost = 1;
+                    break;
+                case 2 : 
+                    baseCost = 3;
+                    break;
+                case 3 : 
+                    baseCost = 7;
+                    break;
+            }
+            costBySize[i] = baseCost + count;
+        }
+        Console.Error.WriteLine("## COST AND COUNT ##");
+        for (int i = 0 ; i < 4 ; i++)
+        {
+            Console.Error.WriteLine("Tree size 0 : Current count " + countBySize[i] + " | Grow cost " + costBySize[i]);
+        }
+
+    }
+
+    private static void InitPossibleActionByType() {
+        actionByType.Clear();
         int numberOfPossibleActions = int.Parse(Console.ReadLine()); // all legal actions
-        //Console.Error.WriteLine("## POSSIBLE ACTIONS ##");
+        Console.Error.WriteLine("## POSSIBLE ACTIONS ##");
         for (int i = 0; i < numberOfPossibleActions; i++)
         {
             string possibleAction = Console.ReadLine(); // try printing something from here to start with
@@ -125,111 +136,97 @@ class Player
                 sortedActionByType[keyAction] = actionByType[keyAction].OrderBy(coord => coord.targetIndex).ToList();
             } else {
                 sortedActionByType[keyAction] = actionByType[keyAction].OrderBy(coord => coord.cellIndex).ToList();
-            }
-            /*
+            }            
             foreach (Coordinate coordinate in sortedActionByType[keyAction]) 
             {
                 Console.Error.WriteLine(keyAction + " " + coordinate.ToString());
-            }*/
+            }
         }
-        return sortedActionByType;
+        actionByType = sortedActionByType;
+        Console.Error.WriteLine("\n");
     } 
-    
-    private static bool IsCostPayable(int currentIndex)
-    {
-        foreach (Tree tree in trees)
+
+    private static string ComputeCommand() {
+        if (myTreesBySize.ContainsKey(3) && currentDay.sun > 4 && (myTreesBySize[3].Count > 4 || currentDay.index > 22 || (currentDay.index > 20 && myTreesBySize[3].Count > 2))) 
         {
-            if (tree.cellIndex == currentIndex)
+            return "COMPLETE " + myTreesBySize[3][0].cellIndex;
+        }
+        for (int i = 2 ; i >=0 ; i--)
+        {
+            if ( myTreesBySize.ContainsKey(i) && myTreesBySize[i].Count > 0 && currentDay.sun > costBySize[i + 1] ) 
             {
-                switch (tree.size)
+                foreach (Tree tree in myTreesBySize[i])
                 {
-                    case 3 :
-                        return currentDay.sun >= growCostTo3;
-                    case 2 :
-                        return currentDay.sun >= growCostTo2;
-                    case 1 :
-                        return currentDay.sun >= growCostTo1;
-                    case 0 :
-                        return currentDay.sun >= seedCost;
-                    default :
-                        return false;
+                    if (!tree.isDormant)
+                    {
+                        return "GROW " + tree.cellIndex;
+                    }
                 }
             }
         }
+        if (currentDay.index > 0 && currentDay.index < 20 && countBySize[0] == 0 && currentDay.sun > costBySize[0] )
+        { 
+            if (actionByType.ContainsKey("SEED")) 
+            {
+                List<Coordinate> seedFrom2Or3 = FilterPossibleSeedFromTree1(actionByType["SEED"]);
+                foreach(Coordinate coordinate in seedFrom2Or3) 
+                {
+                    Console.Error.WriteLine("Possible SEED " + coordinate.ToString());
+                }
+                if(seedFrom2Or3.Count > 0)
+                {
+                    string bestSeedSoFar = "SEED " + seedFrom2Or3[0].ToString();
+                    foreach(Coordinate coordinate in seedFrom2Or3) 
+                    {
+                        if (!IsAdjacentToMyTree(coordinate.targetIndex))
+                        {
+                            bestSeedSoFar = "SEED " + coordinate.ToString();
+                            break;
+                        }
+                    }
+                    return bestSeedSoFar;
+                }
+            }
+        }            
+        return "WAIT ZZzz...";
+    }
+
+    private static List<Coordinate> FilterPossibleSeedFromTree1(List<Coordinate> coordinates){
+        List<Coordinate> filtered = new List<Coordinate>();
+        foreach (Coordinate coordinate in coordinates)
+        {
+            if (myTreesByindex[coordinate.cellIndex].size > 1 ) 
+            {
+                filtered.Add(coordinate);
+            }
+        }
+        return filtered;
+    }
+
+    private static bool IsAdjacentToMyTree(int targetCellIndex) {
+        foreach (int neighboor in cellsByIndex[targetCellIndex].neighboors)
+        {
+            if (myTreesByindex.ContainsKey(neighboor) && myTreesByindex[neighboor] != null) 
+            {
+                return true;
+            }   
+        }        
         return false;
     }
 
+
     static void Main(string[] args)
     {
-        cells = InitCells();
+        InitCells();
         // game loop
         while (true)
         {
             currentDay = new Day();
-            //Console.Error.WriteLine("## CURRENT DAY ##\n" + currentDay.ToString());
-            trees = InitTrees(currentDay);
-            //Console.Error.WriteLine("## COST AS START OF DAY ##" + "\n" + "SeedCost : " + seedCost+  " | 0 to 1 : " + growCostTo1 + " | 1 to 2 : " + growCostTo2 + " | 2 to 3 : " + growCostTo3 );
-            Dictionary<string, List<Coordinate>> actionByType = InitPossibleActionByType();
+            Console.Error.WriteLine("## CURRENT DAY ##\n" + currentDay.ToString());
+            InitMyTrees();
+            InitPossibleActionByType();
             ComputeCountAndCosts();
-            string currentCommand = "WAIT";
-            if ((currentDay.index > 21 || numberOfTree3 > 4 ) && actionByType.ContainsKey("COMPLETE")) {
-                foreach (Coordinate coordinate in actionByType["COMPLETE"]) {
-                    if (coordinate.cellIndex < 7 && currentDay.sun > 3) 
-                    {
-                        currentCommand = "COMPLETE " + coordinate.cellIndex;
-                        break;
-                    } else if (coordinate.cellIndex < 19 && currentDay.sun > 3) 
-                    {
-                        currentCommand = "COMPLETE " + coordinate.cellIndex;
-                        break;
-                    } else if ( currentDay.sun > 3 ) {
-                        currentCommand = "COMPLETE " + coordinate.cellIndex;
-                        break;
-                    }
-                } 
-            }
-            if (currentCommand == "WAIT" && actionByType.ContainsKey("GROW")) 
-            {
-                foreach (Coordinate coordinate in actionByType["GROW"]) 
-                {
-                    if (coordinate.cellIndex < 7 && IsCostPayable(coordinate.cellIndex)) 
-                    {
-                        currentCommand = "GROW " + coordinate.cellIndex;
-                        break;
-                    } else if (coordinate.cellIndex < 19 && IsCostPayable(coordinate.cellIndex)) 
-                    {
-                        currentCommand = "GROW " + coordinate.cellIndex;
-                        break;
-                    } else if ( IsCostPayable(coordinate.cellIndex)) 
-                    {
-                        currentCommand = "GROW " + coordinate.cellIndex;
-                        break;
-                    }
-                }
-            } 
-            if ( numberOfSeeds < 2 && currentDay.index < 19 && currentCommand == "WAIT" && actionByType.ContainsKey("SEED")) {
-                foreach (Coordinate coordinate in actionByType["SEED"]) 
-                {
-                    if (coordinate.targetIndex < 7  &&  currentDay.sun >= seedCost) 
-                    {
-                        currentCommand = "SEED " + coordinate.cellIndex + " " + coordinate.targetIndex;
-                        seedCost++;
-                        break;
-                    }  else if (coordinate.targetIndex < 19  && currentDay.sun >= seedCost) 
-                    {
-                        currentCommand = "SEED " + coordinate.cellIndex + " " + coordinate.targetIndex;
-                        seedCost++;
-                        break;
-                    } else if (currentDay.sun >= seedCost ) {
-                        currentCommand = "SEED " + coordinate.cellIndex + " " + coordinate.targetIndex;
-                        seedCost++;
-                        break;
-                    }                   
-                }
-            }
-
-            // GROW cellIdx | SEED sourceIdx targetIdx | COMPLETE cellIdx | WAIT <message>
-            Console.WriteLine(currentCommand);
+            Console.WriteLine(ComputeCommand());
         }
     }
 }
